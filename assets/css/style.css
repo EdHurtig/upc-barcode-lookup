@@ -204,7 +204,7 @@ a:focus {
 	SITE WRAPS
 ################################################################# */
 
-#headerwrap {
+.headerwrap {
 	background-color: #00b3fe;
 	min-height: 300px;
 	padding-top: 100px;
@@ -212,17 +212,17 @@ a:focus {
 	text-align: center;
 }
 
-#headerwrap h3, h5 {
+.headerwrap h3, h5 {
 	color: white;
 	font-weight: 400;
 }
 
-#headerwrap h1 {
+.headerwrap h1 {
 	color: white;
 	margin-bottom: 25px;
 }
 
-#headerwrap .img-responsive {
+.headerwrap .img-responsive {
 	margin: 0 auto;
 }
 

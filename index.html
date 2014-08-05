@@ -8,7 +8,7 @@
     <meta name="author" content="Eddie Hurtig">
     <link rel="shortcut icon" href="assets/ico/favicon.ico">
 
-    <title>UPC Barcode Scan</title>
+    <title>EdHurtig's JS UPC Barcode Scan App</title>
 
     <!-- Bootstrap core CSS -->
     <link href="assets/css/bootstrap.css" rel="stylesheet">
@@ -57,7 +57,7 @@
 	<!-- *****************************************************************************************************************
 	 HEADERWRAP
 	 ***************************************************************************************************************** -->
-	<div id="headerwrap">
+	<div class="headerwrap">
 	    <div class="container">
 			<div class="row">
 				<div class="col-lg-8 col-lg-offset-2">
@@ -69,10 +69,20 @@
 				 	 <div class="input-group">
 				 	 	<input type="text" class="form-control" id="upc" placeholder="Enter UPC">
 
-				      	<div id="upc-error" class="input-group-addon">Init</div>
+				      	<div class="upc-status input-group-addon">Init</div>
 				    </div>
 				 	</div>
 				</div>
+                <div class="col-lg-8 col-lg-offset-2 himg" style="color:white;">
+                        <div class="checkbox text-left">
+                            <label>
+                                <input type="checkbox" id="log_errors" checked="checked"> Log Errors
+                            </label>
+                        </div>
+
+
+
+                </div>
 			</div><!-- /row -->
 	    </div> <!-- /container -->
 	</div><!-- /headerwrap -->
@@ -85,14 +95,33 @@
 	 		<div class="row centered">
  				<div class="col-md-12">
  					<h1>Results</h1>
- 					<p>Will show up in CSV format: barcode,name</p>
+                    <p><a href="#">Download CSV</a> | <a href="/wp-json/posts/?type=upc-product&meta_key=session_id&meta_value=1">WP-JSON</a></p>
  				</div>
  					
 	 		</div>
  			<div class="row centered">
  				<div class="col-md-12">
- 					<code id="result">
- 					</code>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ISO 8601</th>
+                                <th>Barcode</th>
+                                <th>Name</th>
+                                <th>description</th>
+                            </tr>
+                        </thead>
+                        <tbody class="results-placeholder">
+                            <td colspan="4" class="on-new-remove">No Products Scanned</td>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th>ISO 8601</th>
+                                <th>Barcode</th>
+                                <th>Name</th>
+                                <th>description</th>
+                            </tr>
+                        </tfoot>
+                    </table>
  				</div>
  					
 	 		</div>
@@ -109,7 +138,7 @@
 		 		<div class="col-lg-4">
 		 			<h4>About</h4>
 		 			<div class="hline-w"></div>
-		 			<p>AN open source project by Eddie Hurtig</p>
+		 			<p>An open source project by Eddie Hurtig</p>
 		 		</div>
 		 		<div class="col-lg-4">
 		 			<h4>Social Links</h4>
@@ -231,43 +260,89 @@
 	<script type="text/javascript">
 
 		jQuery(function ($) {
-			var keyOut;
-			$('#upc-error').html('Ready');
+			$('.upc-status').html('Ready');
 			$('#upc').focus();
+
+            function resetErrors() {
+                $('.headerwrap').removeClass('error');
+                $('.upc-status').html('Ready');
+            }
+            var log_errors = true;
+            $('#log_errors').change(function () {
+                log_errors = $(this).is(':checked');
+            })
+
+
+
 			$('#upc').keyup(function () {
 				var barcode = $(this).val();
-				$('#upc-error').html('Typing');
-				clearTimeout(keyOut);
-				keyOut = setTimeout(function () {
-					$('#upc-error').html('Checking');
-					$.ajax({
+
+                // When the Barcode Textbox is filled with 12 chars (UPC always 12 chars)
+				if (barcode.length == 12) {
+					$('.upc-status').html('Checking');
+                    $('.headerwrap').removeClass('error');
+
+                    $.ajax({
 					    url: 'http://www.outpan.com/api/get_product.php?barcode=' + barcode,
-					    timeout: 500,
+					    timeout: 2000, // Timeout 2 Seconds
 					    dataType: "json",
 					    complete: function(jqXHR, textStatus, errorThrown) {
 							var json;
 							try {
 								json = JSON.parse(jqXHR.responseText)
 							} catch (e) {
-								$('#upc-error').html('Server didn\'t send valid JSON ' + jqXHR.responseText);
+								$('.upc-status').html('Server didn\'t send valid JSON ' + jqXHR.responseText);
 								return;
 							}
 							if (!json.error) {
-								$('#result').append(barcode + ',' + json.name + '<br />');
-								$('#upc-error').html('Ready');
+
+                                $('.on-new-remove').remove();
+                                $('.on-new-hide').hide();
+
+								$('.results-placeholder').append($('<tr/>').append($('<td/>').text(new Date().toISOString())).append($('<td/>').text(json.barcode)).append($('<td/>').text(json.name)).append($('<td/>').text(json.description)));
+								$('.upc-status').html('Ready');
 							} else {
-								$('#upc-error').html('Error: ' + json.error.message);
+                                $('.headerwrap').addClass('error');
+                                setTimeout(function () {
+                                    resetErrors();
+                                }, 5000);
+								$('.upc-status').html('Error: ' + json.error.message);
+
+                                if (log_errors) {
+                                    $('.on-new-remove').remove();
+                                    $('.on-new-hide').hide();
+                                    $('.results-placeholder').append($('<tr/>').addClass('danger').append($('<td/>').text(new Date().toISOString())).append($('<td/>').text(barcode)).append($('<td/>').text('Error: ' + json.error.message)).append($('<td/>')));
+                                }
 							}
 
 							$('#upc').val('');
 					    }
 					});
-					
-					
-				}, 500)
-
+                }
 			});
 		})
 	</script>
+
+  <style>
+      @-webkit-keyframes error-reset {
+          0% {
+              background-color: #00b3fe;
+          }
+          48% {
+              background-color: #00b3fe;
+          }
+          52% {
+              background-color: #ff0000;
+          }
+          100% {
+              background-color: #ff0000;
+          }
+      }
+
+      div.error {
+          animation: error-reset 500ms infinite;
+          background-color: #ff0000;
+      }
+  </style>
   </body>
 </html>
